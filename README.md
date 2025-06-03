@@ -1,6 +1,45 @@
-# React + TypeScript + Vite
+# AI Puzzle - React + TypeScript + Vite
+
+A Puzzle & Dragons style game built with React, TypeScript, and Vite.
+
+## 🚀 Live Demo
+
+The app is automatically deployed to GitHub Pages: [https://arihh.github.io/ai_puzzle/](https://arihh.github.io/ai_puzzle/)
+
+## 🛠️ Development
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+
+### Getting Started
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+
+# Run linter
+npm run lint
+```
+
+## 📦 Deployment
+
+The app is automatically deployed to GitHub Pages when changes are pushed to the main branch using GitHub Actions.
+
+### Manual Deployment Setup
+
+If you need to set up deployment manually:
+
+1. Enable GitHub Pages in repository settings
+2. Set source to "GitHub Actions"
+3. The workflow in `.github/workflows/deploy.yml` will handle the build and deployment
 
 Currently, two official plugins are available:
 
