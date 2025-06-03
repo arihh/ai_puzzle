@@ -1,0 +1,139 @@
+.puzzle-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.puzzle-board {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  gap: 2px;
+  background-color: #333;
+  padding: 10px;
+  border-radius: 10px;
+  max-width: 480px;
+  width: 100%;
+  aspect-ratio: 6/5;
+  margin: 20px 0;
+  touch-action: none; /* Prevent default touch behaviors */
+}
+
+.puzzle-block {
+  background-color: #666;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.3), 
+              0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.puzzle-block:hover {
+  transform: scale(1.05);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.puzzle-block:active,
+.puzzle-block.dragging {
+  transform: scale(1.1);
+  z-index: 10;
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.3), 
+              0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+/* Color definitions for the 6 block types */
+.color-0 {
+  background: linear-gradient(135deg, #ff4444, #cc0000);
+}
+
+.color-1 {
+  background: linear-gradient(135deg, #4444ff, #0000cc);
+}
+
+.color-2 {
+  background: linear-gradient(135deg, #44ff44, #00cc00);
+}
+
+.color-3 {
+  background: linear-gradient(135deg, #ffff44, #cccc00);
+}
+
+.color-4 {
+  background: linear-gradient(135deg, #ff44ff, #cc00cc);
+}
+
+.color-5 {
+  background: linear-gradient(135deg, #ff8844, #cc4400);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .puzzle-game {
+    padding: 10px;
+  }
+  
+  .puzzle-board {
+    max-width: 360px;
+    gap: 1px;
+    padding: 8px;
+  }
+  
+  .puzzle-block {
+    border-radius: 6px;
+    border-width: 1px;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+  .puzzle-board {
+    max-width: 300px;
+  }
+  
+  .puzzle-game h2 {
+    font-size: 1.2em;
+  }
+  
+  .puzzle-game p {
+    font-size: 0.9em;
+  }
+}
+
+/* Disable text selection during drag */
+.puzzle-game * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Animation for when blocks are removed */
+@keyframes block-removal {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+.block-removing {
+  animation: block-removal 0.3s ease-out;
+}
