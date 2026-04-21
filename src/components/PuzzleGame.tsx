@@ -284,7 +284,7 @@ const PuzzleGame: React.FC = () => {
 
   return (
     <div className="puzzle-game">
-      <h2>Puzzle & Dragons Style Game</h2>
+      <h2>パズル＆ドラゴンズ風ゲーム</h2>
       <div className="puzzle-board">
         {board.map((row, rowIndex) =>
           row.map((color, colIndex) => (
