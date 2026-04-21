@@ -306,7 +306,14 @@ const PuzzleGame: React.FC = () => {
           ))
         )}
       </div>
-      <p>Drag blocks to move them. Match 3 or more of the same color to clear them!</p>
+      <div className="instructions-container">
+        <h3 className="instructions-title">操作方法</h3>
+        <ul className="instructions-list">
+          <li>好きなドロップを掴んで自由に動かそう</li>
+          <li>同じ色のドロップを3つ以上並べて消そう</li>
+          <li>ドロップが消えると新しいドロップが降り、連鎖が発生！</li>
+        </ul>
+      </div>
     </div>
   );
 };
