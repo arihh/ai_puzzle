@@ -5,7 +5,6 @@ import './PuzzleGame.css';
 const BOARD_WIDTH = 6;
 const BOARD_HEIGHT = 5;
 const COLORS = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
-const ATTRIBUTES = ['🔥', '💧', '🍃', '✨', '🌙', '❤️'];
 const TURN_TIME_LIMIT = 5000; // 5 seconds
 
 type BlockColor = number; // 0-5 representing different colors
@@ -93,7 +92,8 @@ const removeDuplicateMatches = (matches: Position[]): Position[] => {
 const PuzzleGame: React.FC = () => {
   const [board, setBoard] = useState<Board>(initializeBoard);
   const [draggedBlock, setDraggedBlock] = useState<Position | null>(null);
-  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
+  const [clearingPositions, setClearingPositions] = useState<Set<string>>(new Set());
   const [timeLeft, setTimeLeft] = useState(TURN_TIME_LIMIT);
   const [isTimerActive, setIsTimerActive] = useState(false);
   const [comboCount, setComboCount] = useState(0);
@@ -141,18 +141,29 @@ const PuzzleGame: React.FC = () => {
         turnCombo++;
         setComboCount(turnCombo);
 
+        // Phase 1: Show clearing animation
+        const matchedPositions = new Set<string>();
+        matches.forEach(pos => {
+          matchedPositions.add(`${pos.row}-${pos.col}`);
+        });
+        setClearingPositions(matchedPositions);
+
+        // Wait for animation duration (matching CSS)
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Phase 2: Clear animation state and update board (gravity + refill)
+        setClearingPositions(new Set());
+
         const boardWithRemoval = newBoard.map(row => [...row]);
         matches.forEach(({ row, col }) => {
           boardWithRemoval[row][col] = -1;
         });
-        setBoard(boardWithRemoval);
-
-        await new Promise(resolve => setTimeout(resolve, 400));
 
         newBoard = applyGravity(boardWithRemoval);
         setBoard(newBoard);
 
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Small delay to allow user to see the result of gravity
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
     setIsProcessing(false);
@@ -163,7 +174,7 @@ const PuzzleGame: React.FC = () => {
     if (isProcessing) return;
     e.preventDefault();
     setDraggedBlock({ row, col });
-    setDragPos({ x: e.clientX, y: e.clientY });
+    setCursorPos({ x: e.clientX, y: e.clientY });
     setComboCount(0);
     setTimeLeft(TURN_TIME_LIMIT);
     setHasMoved(false);
@@ -171,10 +182,9 @@ const PuzzleGame: React.FC = () => {
 
   const handleTouchStart = (e: React.TouchEvent, row: number, col: number) => {
     if (isProcessing) return;
-    e.preventDefault();
     const touch = e.touches[0];
     setDraggedBlock({ row, col });
-    setDragPos({ x: touch.clientX, y: touch.clientY });
+    setCursorPos({ x: touch.clientX, y: touch.clientY });
     setComboCount(0);
     setTimeLeft(TURN_TIME_LIMIT);
     setHasMoved(false);
@@ -183,8 +193,6 @@ const PuzzleGame: React.FC = () => {
   const handleMove = useCallback((clientX: number, clientY: number) => {
     if (!draggedBlock || isProcessing) return;
     if (isTimerActive && timeLeft <= 0) return;
-
-    setDragPos({ x: clientX, y: clientY });
 
     const gameBoard = document.querySelector('.puzzle-board');
     if (!gameBoard) return;
@@ -201,19 +209,44 @@ const PuzzleGame: React.FC = () => {
       targetCol >= 0 && targetCol < BOARD_WIDTH &&
       (targetRow !== draggedBlock.row || targetCol !== draggedBlock.col)
     ) {
-      if (!hasMoved) {
-        setHasMoved(true);
-        setIsTimerActive(true);
+      // Interpolate path for fast dragging
+      const path: Position[] = [];
+      let r = draggedBlock.row;
+      let c = draggedBlock.col;
+
+      const dr = Math.sign(targetRow - r);
+      const dc = Math.sign(targetCol - c);
+
+      while (r !== targetRow || c !== targetCol) {
+          if (r !== targetRow) r += dr;
+          if (c !== targetCol && (Math.abs(targetRow - r) <= Math.abs(targetCol - c) || r === targetRow)) {
+              c += dc;
+          }
+          path.push({row: r, col: c});
       }
 
-      setBoard(prevBoard => {
-        const newBoard = prevBoard.map(row => [...row]);
-        const temp = newBoard[draggedBlock.row][draggedBlock.col];
-        newBoard[draggedBlock.row][draggedBlock.col] = newBoard[targetRow][targetCol];
-        newBoard[targetRow][targetCol] = temp;
-        return newBoard;
-      });
-      setDraggedBlock({ row: targetRow, col: targetCol });
+      if (path.length > 0) {
+        if (!hasMoved) {
+          setHasMoved(true);
+          setIsTimerActive(true);
+        }
+
+        setBoard(prevBoard => {
+          const newBoard = prevBoard.map(row => [...row]);
+          let currentRow = draggedBlock.row;
+          let currentCol = draggedBlock.col;
+
+          for (const step of path) {
+              const temp = newBoard[currentRow][currentCol];
+              newBoard[currentRow][currentCol] = newBoard[step.row][step.col];
+              newBoard[step.row][step.col] = temp;
+              currentRow = step.row;
+              currentCol = step.col;
+          }
+          return newBoard;
+        });
+        setDraggedBlock({ row: targetRow, col: targetCol });
+      }
     }
   }, [draggedBlock, isProcessing, isTimerActive, timeLeft, hasMoved]);
 
@@ -243,7 +276,7 @@ const PuzzleGame: React.FC = () => {
     if (!draggedBlock) return;
     setIsTimerActive(false);
     setDraggedBlock(null);
-    setDragPos(null);
+    setCursorPos(null);
 
     if (hasMoved) {
       await processMatches(board);
@@ -257,16 +290,22 @@ const PuzzleGame: React.FC = () => {
   }, [timeLeft, draggedBlock, handleEnd]);
 
   useEffect(() => {
-    const handleGlobalMove = (e: MouseEvent) => handleMove(e.clientX, e.clientY);
+    const handleGlobalMove = (e: MouseEvent) => {
+      setCursorPos({ x: e.clientX, y: e.clientY });
+      handleMove(e.clientX, e.clientY);
+    };
     const handleGlobalTouchMove = (e: TouchEvent) => {
-      if (e.touches[0]) handleMove(e.touches[0].clientX, e.touches[0].clientY);
+      if (e.touches[0]) {
+        setCursorPos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+        handleMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
     };
     const handleGlobalEnd = () => handleEnd();
 
     if (draggedBlock) {
       window.addEventListener('mousemove', handleGlobalMove);
       window.addEventListener('mouseup', handleGlobalEnd);
-      window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+      window.addEventListener('touchmove', handleGlobalTouchMove);
       window.addEventListener('touchend', handleGlobalEnd);
     }
     return () => {
@@ -297,32 +336,43 @@ const PuzzleGame: React.FC = () => {
         {board.map((row, rowIndex) =>
           row.map((color, colIndex) => {
             const isDragging = draggedBlock?.row === rowIndex && draggedBlock?.col === colIndex;
+            const isClearing = clearingPositions.has(`${rowIndex}-${colIndex}`);
             return (
               <div
                 key={`${rowIndex}-${colIndex}`}
-                className={`puzzle-block color-${color} ${isDragging ? 'dragging' : ''}`}
+                className={`puzzle-block color-${color} ${isDragging ? 'dragging' : ''} ${isClearing ? 'block-removing' : ''}`}
                 onMouseDown={(e) => handleMouseDown(e, rowIndex, colIndex)}
                 onTouchStart={(e) => handleTouchStart(e, rowIndex, colIndex)}
                 style={{
                   gridRow: rowIndex + 1,
                   gridColumn: colIndex + 1,
-                  ...(isDragging && dragPos ? {
-                    position: 'fixed',
-                    left: dragPos.x,
-                    top: dragPos.y,
-                    transform: 'translate(-50%, -50%) scale(1.2)',
-                    width: '60px', // Fixed size while dragging
-                    height: '60px',
-                  } : {})
                 }}
               >
-                <span className="orb-symbol">{ATTRIBUTES[color]}</span>
               </div>
             );
           })
         )}
       </div>
-      <p>Drag an orb to move it anywhere. Swapping starts the timer!</p>
+
+      <div className="instructions-container">
+        <h3 className="instructions-title">操作方法</h3>
+        <ul className="instructions-list">
+          <li>好きなドロップを掴んで自由に動かそう</li>
+          <li>同じ色のドロップを3つ以上並べて消そう</li>
+          <li>ドロップが消えると新しいドロップが降り、連鎖が発生！</li>
+        </ul>
+      </div>
+
+      {/* Floating orb overlay */}
+      {draggedBlock && cursorPos && (
+        <div
+          className={`floating-orb color-${board[draggedBlock.row][draggedBlock.col]}`}
+          style={{
+            left: `${cursorPos.x}px`,
+            top: `${cursorPos.y}px`,
+          }}
+        />
+      )}
     </div>
   );
 };
