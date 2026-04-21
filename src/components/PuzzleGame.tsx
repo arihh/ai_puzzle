@@ -4,7 +4,7 @@ import './PuzzleGame.css';
 // Game constants
 const BOARD_WIDTH = 6;
 const BOARD_HEIGHT = 5;
-const COLORS = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
+const COLORS = ['red', 'blue', 'green', 'yellow', 'purple', 'pink'];
 
 type BlockColor = number; // 0-5 representing different colors
 type Board = BlockColor[][];
@@ -99,6 +99,7 @@ const PuzzleGame: React.FC = () => {
   const [board, setBoard] = useState<Board>(initializeBoard);
   const [draggedBlock, setDraggedBlock] = useState<Position | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 
   // Remove matches from the board
   const removeMatches = useCallback((currentBoard: Board): Board => {
@@ -166,6 +167,7 @@ const PuzzleGame: React.FC = () => {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top
     });
+    setCursorPos({ x: e.clientX, y: e.clientY });
   };
 
   // Handle touch start
@@ -178,6 +180,7 @@ const PuzzleGame: React.FC = () => {
       x: touch.clientX - rect.left,
       y: touch.clientY - rect.top
     });
+    setCursorPos({ x: touch.clientX, y: touch.clientY });
   };
 
   // Handle mouse/touch move
@@ -228,6 +231,7 @@ const PuzzleGame: React.FC = () => {
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (draggedBlock) {
+        setCursorPos({ x: e.clientX, y: e.clientY });
         handleMove(e.clientX, e.clientY);
       }
     };
@@ -236,6 +240,7 @@ const PuzzleGame: React.FC = () => {
       if (draggedBlock) {
         e.preventDefault();
         const touch = e.touches[0];
+        setCursorPos({ x: touch.clientX, y: touch.clientY });
         handleMove(touch.clientX, touch.clientY);
       }
     };
@@ -247,6 +252,7 @@ const PuzzleGame: React.FC = () => {
         setBoard(newBoard);
         setDraggedBlock(null);
         setDragOffset(null);
+        setCursorPos(null);
       }
     };
 
@@ -307,6 +313,18 @@ const PuzzleGame: React.FC = () => {
         )}
       </div>
       <p>Drag blocks to move them. Match 3 or more of the same color to clear them!</p>
+
+      {/* Floating orb overlay */}
+      {draggedBlock && cursorPos && (
+        <div
+          className={`floating-orb color-${board[draggedBlock.row][draggedBlock.col]}`}
+          style={{
+            left: `${cursorPos.x}px`,
+            top: `${cursorPos.y}px`,
+            backgroundColor: COLORS[board[draggedBlock.row][draggedBlock.col]],
+          }}
+        />
+      )}
     </div>
   );
 };
