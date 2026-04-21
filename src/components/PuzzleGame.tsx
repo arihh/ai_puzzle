@@ -99,6 +99,7 @@ const PuzzleGame: React.FC = () => {
   const [board, setBoard] = useState<Board>(initializeBoard);
   const [draggedBlock, setDraggedBlock] = useState<Position | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
+  const [clearingPositions, setClearingPositions] = useState<Set<string>>(new Set());
 
   // Remove matches from the board
   const removeMatches = useCallback((currentBoard: Board): Board => {
@@ -148,9 +149,23 @@ const PuzzleGame: React.FC = () => {
       if (matches.length === 0) {
         hasMatches = false;
       } else {
-        newBoard = removeMatches(newBoard);
-        // Small delay for visual effect
+        // Phase 1: Show clearing animation
+        const matchedPositions = new Set<string>();
+        matches.forEach(pos => {
+          matchedPositions.add(`${pos.row}-${pos.col}`);
+        });
+        setClearingPositions(matchedPositions);
+
+        // Wait for animation duration (matching CSS)
         await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Phase 2: Clear animation state and update board (gravity + refill)
+        setClearingPositions(new Set());
+        newBoard = removeMatches(newBoard);
+        setBoard(newBoard);
+
+        // Small delay to allow user to see the result of gravity
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
     
@@ -294,7 +309,7 @@ const PuzzleGame: React.FC = () => {
                 draggedBlock?.row === rowIndex && draggedBlock?.col === colIndex
                   ? 'dragging'
                   : ''
-              }`}
+              } ${clearingPositions.has(`${rowIndex}-${colIndex}`) ? 'block-removing' : ''}`}
               onMouseDown={(e) => handleMouseDown(e, rowIndex, colIndex)}
               onTouchStart={(e) => handleTouchStart(e, rowIndex, colIndex)}
               style={{
